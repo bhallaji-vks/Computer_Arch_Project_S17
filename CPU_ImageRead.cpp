@@ -1,4 +1,5 @@
-//Image read, Smoothing operation performed
+//Image read, Smoothing, gradient, edge direction detection, non maximum supression and hysteresis operations performed 
+//compile by g++ -std=c++11 -o read imageread.cpp
 // Bhallaji Venkatesan and Divya Sampath Kumar
 
 #define _DEFINE_DEPRECATED_HASH_CLASSES 0
@@ -21,17 +22,11 @@
 #include <vector>
 #define STRONG_EDGE 0xFF
 #define NON_EDGE 0x0
-/*class EdgeDetection
-{	void visitNeighbors(int i, int j, float lowThreshold, unsigned char* gradientImage, unsigned char* outputEdges, int width);
-	void performHysteresis(unsigned char* gradientImage, float highThreshold, float lowThreshold, unsigned char* outputEdges, int width) 
-	std::hash_set<unsigned> visitedPixels;
-};
-*/
+
 
 using namespace std;
 
-//using namespace stdext;
-//hash_set<unsigned> visitedPixels;
+
 std::unordered_set<unsigned int> visitedPixels;
 
 //#include <sys/io.h>
@@ -41,10 +36,10 @@ std::unordered_set<unsigned int> visitedPixels;
 
 #include "bmp.h"
 
-char *BMPInFile = "meena.bmp";
+char *BMPInFile = "car.bmp";
 char *BMPOutFile = "suppress.bmp";
 
-//vector<int> visited_vec;‘visitedPixels’
+
 void BitMapRead(char *file,struct bmp_header *bmp, struct dib_header *dib, unsigned char **data, unsigned char **palete)
 {
 	
@@ -257,7 +252,6 @@ int getCounterClockwisePerpendicularIndex(unsigned i, unsigned j, unsigned edgeD
 
 
 void classifyEdgeDirections(int imgsize, unsigned int* edgeDirectionClassifications, unsigned char* edgeDirections)
-//void classifyEdgeDirections(int imgsize, unsigned int* edgeDirectionClassifications)
 {
 	int c0,c1,c2,c3;	
 	for(unsigned int i = 0; i < imgsize; ++i)
@@ -364,12 +358,11 @@ void computeEdgeDirections(unsigned char* gradient, int imgsize, unsigned char* 
 		float y_l = *(y+i);
 		float l = ((atan2 (3.9, 1.0) * (180 / 3.14159265))+180);
 		edgeDirections[i]= (unsigned char)((atan2 (x_l, y_l) * (180 / 3.14159265))+180);
-		//atan2(float(*(xGradient_local+i)), float(*(yGradient_local+i))) * (180 / 3.14159265)+ 180.0
+		
 	}
 	
 	
 	//edge classification
-	//classifyEdgeDirections(imgsize, edgeDirectionClassifications, edgeDirections);
 	classifyEdgeDirections(imgsize, edc_local, edgeDirections);
 	
 	//suppress non-maximum
@@ -377,16 +370,7 @@ void computeEdgeDirections(unsigned char* gradient, int imgsize, unsigned char* 
 	
 }
 
-//void insert(int pixelIndex, unsigned int* in_arr, int imgsize)
-//{
-//	for(unsigned int i=0;i<imgsize;i++)
-//	{
-//		in_arr[i] = pixelIndex;
-//	}
-//}
 
-//void find(int pixelIndex)
-//{
 	
 
 
@@ -437,15 +421,9 @@ void performHysteresis(unsigned char* gradientImage, float highThreshold, float 
 				visitedPixels.insert(pixelIndex);
 				outputEdges[pixelIndex] = STRONG_EDGE;
 				visitNeighbors(i, j, lowThreshold, gradientImage, outputEdges, width, imgsize);
-				//insert(pixelIndex,in_arr, imgsize);
-				//outputEdges[pixelIndex] = STRONG_EDGE;
+				
 			}
-			/*
-			else if(gradientImage[pixelIndex] < highThreshold && gradientImage[pixelIndex] > lowThreshold)
-			{	
-				visitNeighbors(i, j, lowThreshold, gradientImage, outputEdges, width, imgsize);
-			}
-			*/
+			
 			
 		}
 	}
@@ -476,10 +454,11 @@ int main()
 	yGradient = (unsigned char *)malloc(dib.image_size);
 	gradient = (unsigned char *)malloc(dib.image_size);
 	
-
+	//Gaussian Smoothening
 	convolution(data, out, dib.width, gaussianMask, 5, gaussianMaskWeight);
-	BitMapWrite("gaussian.bmp", &bmp, &dib, out, palete);
-	//free(out);
+	BitMapWrite("Gaussian_Smooth.bmp", &bmp, &dib, out, palete);
+
+
 	convolution(out, xGradient, dib.width, xGradientMask, 3, 1);
 	convolution(out, yGradient, dib.width, yGradientMask, 3, 1);
 	for(unsigned int i = 0; i < dib.width; ++i)
@@ -490,26 +469,21 @@ int main()
 			gradient[matrixIndex] = fabs(xGradient[matrixIndex]) + fabs(yGradient[matrixIndex]);
 		}
 	}
-	BitMapWrite("gradient_image2.bmp", &bmp, &dib, gradient, palete);
+	BitMapWrite("Gaussian_Gradient.bmp", &bmp, &dib, gradient, palete);
 	out = NULL;
 	free(out);
 	data = NULL;
 	free(data);
-	//free(out);
-	//free(data);
+
+
 	edgeDirections2 = (unsigned char *)malloc(dib.image_size);
 	hys_output = (unsigned char *)malloc(dib.image_size);
 	edgeDirectionClassifications = (unsigned int *)malloc(dib.image_size);
-//void computeEdgeDirections(unsigned char* gradient, int imgsize, float* edgeDirections, unsigned char* xGradient, unsigned char* yGradient, unsigned int* edgeDirectionClassifications, int width)
-	//computeEdgeDirections(gradient,dib.image_size,edgeDirections2,xGradient,yGradient,edgeDirectionClassifications,dib.width);
-	//BitMapWrite("gradient_image_edge_latest2.bmp", &bmp, &dib, gradient, palete);
-	//CPU_Boost(data, out, dib.width, dib.height);
-
-	//BitMapWrite("Sup_test.bmp", &bmp, &dib, gradient, palete);
-	//BitMapWrite("suppress.bmp", &bmp, &dib, gradient, palete);
-
+	computeEdgeDirections(gradient,dib.image_size,edgeDirections2,xGradient,yGradient,edgeDirectionClassifications,dib.width);
+	BitMapWrite("Gradient_Edge_Supression.bmp", &bmp, &dib, gradient, palete);
+	
 	performHysteresis(gradient,highThreshold,lowThreshold,hys_output,dib.width, dib.image_size);
-	BitMapWrite("hysterisis_test_wosupp.bmp", &bmp, &dib, hys_output, palete);
+	BitMapWrite("Gradient_Edge_Supression_Hysteresis.bmp", &bmp, &dib, hys_output, palete);
 }
 	
 
